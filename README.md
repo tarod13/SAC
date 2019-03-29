@@ -1,5 +1,5 @@
 # SAC
-Implementation of Soft Actor-Critic algorithm in MuJoco environments.
+Pytorch implementation of Soft Actor-Critic algorithm in MuJoco environments.
 
 Source: Haarnoja, T., Zhou, A., Abbeel, P., and Levine, S. Soft actor-critic: Off-policy maximum entropy
 deep reinforcement learning with a stochastic actor. In International Conference on Machine
