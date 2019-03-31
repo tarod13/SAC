@@ -9,16 +9,6 @@ from torch.distributions import Normal, MultivariateNormal
 
 ###########################################################################
 #
-#                           General methods
-#
-###########################################################################
-# def weights_init(m):
-#     classname = m.__class__.__name__
-#     if classname.find('Linear') != -1:        
-#         nn.init.normal_(m.weight.data)
-
-###########################################################################
-#
 #                               Classes
 #
 ###########################################################################
@@ -270,11 +260,5 @@ class policyNet(nn.Module):
         stdev = log_stdev.exp()
         u = m + stdev*torch.randn_like(m)
         a = torch.tanh(u)
-        if stdev.size()[1] == 1:   
-            llhood = Normal(m, stdev).log_prob(u) - torch.log(torch.clamp(1 - a.pow(2), 1e-6, 1.0)).sum(dim=1)   
-        else:
-            cov_matrix = torch.zeros(stdev.size()[0],stdev.size()[1],stdev.size()[1], device=stdev.device)
-            cov_matrix.as_strided(stdev.size(), [cov_matrix.stride(0), cov_matrix.size(2) + 1]).copy_(stdev.pow(2))             # https://discuss.pytorch.org/t/batch-of-diagonal-matrix/13560
-            llhood = MultivariateNormal(m, cov_matrix).log_prob(u) - torch.log(torch.clamp(1 - a.pow(2), 1e-6, 1.0)).sum(dim=1)     
+        llhood = (Normal(m, stdev).log_prob(u) - torch.log(torch.clamp(1 - a.pow(2), 1e-6, 1.0))).sum(dim=1, keepdim=True)
         return a, llhood
-        

@@ -1,16 +1,16 @@
 import pickle
 import numpy as np
 from system import System
-pendulum = System()
-tr_epsds = 80
-epsd_steps = 500
+n_test = 6
+system_type = 'Hopper-v2'
+system = System(system=system_type, reward_scale=100)
+tr_epsds = 200
+epsd_steps = 1000
 mean_rewards = []
-for i in range(1,2):
+for i in range(1,6):
     if i == 1:
-        mean_rewards.append(pendulum.train_agent(tr_epsds, epsd_steps))
-        pickle.dump(pendulum,open('pendulum_9_1.p','wb'))
-        np.savetxt('mean_rewards_pendulum_9.txt',mean_rewards)
+        mean_rewards.append(system.train_agent(tr_epsds, epsd_steps))        
     else:
-        mean_rewards.append(pendulum.train_agent(tr_epsds, epsd_steps, initialization=False))
-        pickle.dump(pendulum,open('pendulum_9_'+str(i)+'.p','wb'))
-        np.savetxt('mean_rewards_pendulum_9.txt',mean_rewards)
+        mean_rewards.append(system.train_agent(tr_epsds, epsd_steps, initialization=False))
+    pickle.dump(system,open(system_type+'_'+str(n_test)+'_'+str((i+5)//5)+'.p','wb'))
+    np.savetxt('mean_rewards_'+system_type+'_'+str(n_test)+'.txt',mean_rewards)

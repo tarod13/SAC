@@ -140,17 +140,18 @@ class Agent:
 #
 #-------------------------------------------------------------
 class System:
-    def __init__(self, memory_capacity = 200000, env_steps=1, grad_steps=1, init_steps=1000, reward_scale = 25,
-        temperature=1.0, soft_lr=5e-3, batch_size=256, hard_start = False, original_state=True, system='Pendulum-v0'): # 'Pendulum-v0', 'Hopper-v2', 'HalfCheetah-v2', 'Swimmer-v2'
+    def __init__(self, memory_capacity = 200000, env_steps=1, grad_steps=1, init_steps=256, reward_scale = 25,
+        temperature=1.0, soft_lr=5e-3, batch_size=256, hard_start = False, original_state=True, system='Hopper-v2'): # 'Pendulum-v0', 'Hopper-v2', 'HalfCheetah-v2', 'Swimmer-v2'
         self.env = gym.make(system).unwrapped
         self.env.reset()
+        self.type = system
        
-        self.s_dim = self.env.observation_space.shape[0]
-        self.a_dim = self.env.action_space.shape[0]
-        self.sa_dim = self.s_dim + self.a_dim
-        self.e_dim = self.s_dim*2 + self.a_dim + 1
+        self.s_dim = self.env.observation_space.shape[0]               
         if not original_state and system == 'Pendulum-v0':
             self.s_dim -= 1
+        self.a_dim = self.env.action_space.shape[0] 
+        self.sa_dim = self.s_dim + self.a_dim
+        self.e_dim = self.s_dim*2 + self.a_dim + 1
 
         self.env_steps = env_steps
         self.grad_steps = grad_steps
@@ -165,37 +166,7 @@ class System:
         self.reward_scale = reward_scale
 
         self.agent = Agent(s_dim=self.s_dim, a_dim=self.a_dim, memory_capacity=memory_capacity, batch_size=batch_size, reward_scale=reward_scale, 
-            temperature=temperature, soft_lr=soft_lr)
-    
-    def plot_q(self, iter):
-        nt = 100
-        nw = 18 
-        na = 100
-        directory = ''
-        a = torch.linspace(self.min_action, self.max_action,na)
-        t = torch.linspace(-np.pi,np.pi,nt)
-        w = torch.linspace(-8,8,nw)
-        tt, ww, aa = torch.meshgrid(t,w,a)
-        tt = tt[None,:]
-        ww = ww[None,:]
-        aa = aa[None,:]
-        sa = torch.t(torch.cat((tt,ww,aa), dim=0).to(device, dtype=torch.float64).view(self.sa_dim,-1))
-        qt = (self.agent.critic1(sa[:,:self.s_dim], sa[:,self.s_dim:self.sa_dim]).cpu().detach().numpy()).reshape(nt,nw,na)
-
-        plt.figure()
-        for i in range(0,nw):
-            plt.subplot(3,6,i+1, xticks = [], yticks= [])
-            plt.imshow(qt[:,i,:])
-            plt.xlabel(r'$\theta$', {'fontsize': 5})
-            plt.ylabel(r'$a$', {'fontsize': 6})
-            plt.title(r'$\dot{\theta} = $'+str(round(w[i].item(),3)), {'fontsize': 7})   
-        
-        plt.subplots_adjust(bottom=0.1, right=0.85, top=0.9)
-        cax = plt.axes([0.875, 0.1, 0.025, 0.8])
-        plt.colorbar(cax=cax)
-        # plt.tight_layout()
-        plt.savefig(directory+'q_function_iter'+str(iter+1)+'.jpg', dpi = 500)
-        plt.close()
+            temperature=temperature, soft_lr=soft_lr)    
     
     def initialization(self):
         event = np.empty(self.e_dim)
@@ -237,7 +208,8 @@ class System:
         for env_step in range(0, self.env_steps):
               
             cuda_state = torch.FloatTensor(state).unsqueeze(0).to(device)         
-            action = self.agent.act(cuda_state, explore=learn).detach().cpu().numpy()[:,0]            
+            action = self.agent.act(cuda_state, explore=learn)
+            
             reward = self.env.step(scale_action(action, self.min_action, self.max_action))[1]
 
             if self.original_state:
@@ -266,16 +238,16 @@ class System:
         if initialization:
             self.initialization()
         
-        min_reward = 0.0
+        min_reward = 1e10
         max_reward = -1e10
         mean_reward = 0.0   
-        min_mean_reward = 0.0
+        min_mean_reward = 1e10
         max_mean_reward = -1e10   
 
         mean_rewards = []           
         
         for epsd in range(0, tr_epsds):
-            epsd_min_reward = 0.0
+            epsd_min_reward = 1e10
             epsd_max_reward = -1e10                
             epsd_mean_reward = 0.0
 
@@ -298,8 +270,8 @@ class System:
                     epsd_max_reward = np.max([r, epsd_max_reward])                        
                     epsd_mean_reward += r           
             
-            if epsd_mean_reward > max_mean_reward:
-                pickle.dump(self,open('pendulum.p','wb'))
+            # if epsd_mean_reward > max_mean_reward:
+            #     pickle.dump(self,open(self.type+'.p','wb'))
             
             epsd_mean_reward /=epsd_steps            
             mean_rewards.append(epsd_mean_reward)
